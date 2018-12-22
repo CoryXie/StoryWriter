@@ -342,8 +342,71 @@ audio_io_handle_t AudioSystem::getOutput(audio_stream_type_t stream)
     return aps->getOutput(stream);
 }
 
+// client singleton for AudioPolicyService binder interface
+// protected by gLockAPS
+sp<IAudioPolicyService> AudioSystem::gAudioPolicyService;
+sp<AudioSystem::AudioPolicyServiceClient> AudioSystem::gAudioPolicyServiceClient;
 
+// establish binder interface to AudioPolicy service
+const sp<IAudioPolicyService> AudioSystem::get_audio_policy_service()
+{
+    sp<IAudioPolicyService> ap;
+    sp<AudioPolicyServiceClient> apc;
+    {
+        Mutex::Autolock _l(gLockAPS);
+        if (gAudioPolicyService == 0) {
+            sp<IServiceManager> sm = defaultServiceManager();
+            sp<IBinder> binder;
+            do {
+                binder = sm->getService(String16("media.audio_policy"));
+                if (binder != 0)
+                    break;
+                ALOGW("AudioPolicyService not published, waiting...");
+                usleep(500000); // 0.5 s
+            } while (true);
+            if (gAudioPolicyServiceClient == NULL) {
+                gAudioPolicyServiceClient = new AudioPolicyServiceClient();
+            }
+            binder->linkToDeath(gAudioPolicyServiceClient);
+            gAudioPolicyService = interface_cast<IAudioPolicyService>(binder);
+            LOG_ALWAYS_FATAL_IF(gAudioPolicyService == 0);
+            apc = gAudioPolicyServiceClient;
+            // Make sure callbacks can be received by gAudioPolicyServiceClient
+            ProcessState::self()->startThreadPool();
+        }
+        ap = gAudioPolicyService;
+    }
+    if (apc != 0) {
+        int64_t token = IPCThreadState::self()->clearCallingIdentity();
+        ap->registerClient(apc);
+        ap->setAudioPortCallbacksEnabled(apc->isAudioPortCbEnabled());
+        IPCThreadState::self()->restoreCallingIdentity(token);
+    }
+
+    return ap;
+}
+
+status_t AudioSystem::getSamplingRate(audio_io_handle_t ioHandle,
+                                      uint32_t* samplingRate)
+{
+    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
+    if (af == 0) return PERMISSION_DENIED;
+    sp<AudioIoDescriptor> desc = getIoDescriptor(ioHandle);
+    if (desc == 0) {
+        *samplingRate = af->sampleRate(ioHandle);
+    } else {
+        *samplingRate = desc->mSamplingRate;
+    }
+    if (*samplingRate == 0) {
+        ALOGE("AudioSystem::getSamplingRate failed for ioHandle %d", ioHandle);
+        return BAD_VALUE;
+    }
+
+    ALOGV("getSamplingRate() ioHandle %d, sampling rate %u", ioHandle, *samplingRate);
+
+    return NO_ERROR;
+}
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE1NTc2NDM4NTYsLTM2NTk4MDQyXX0=
+eyJoaXN0b3J5IjpbMTA0NDAyNDA4OSwtMzY1OTgwNDJdfQ==
 -->
