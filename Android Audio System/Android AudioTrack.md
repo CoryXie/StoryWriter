@@ -341,7 +341,50 @@ audio_io_handle_t AudioSystem::getOutput(audio_stream_type_t stream)
     if (aps == 0) return 0;
     return aps->getOutput(stream);
 }
+status_t AudioSystem::getSamplingRate(audio_io_handle_t ioHandle,
+                                      uint32_t* samplingRate)
+{
+    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
+    if (af == 0) return PERMISSION_DENIED;
+    sp<AudioIoDescriptor> desc = getIoDescriptor(ioHandle);
+    if (desc == 0) {
+        *samplingRate = af->sampleRate(ioHandle);
+    } else {
+        *samplingRate = desc->mSamplingRate;
+    }
+    if (*samplingRate == 0) {
+        ALOGE("AudioSystem::getSamplingRate failed for ioHandle %d", ioHandle);
+        return BAD_VALUE;
+    }
 
+    ALOGV("getSamplingRate() ioHandle %d, sampling rate %u", ioHandle, *samplingRate);
+
+    return NO_ERROR;
+}
+
+sp<AudioIoDescriptor> AudioSystem::getIoDescriptor(audio_io_handle_t ioHandle)
+{
+    sp<AudioIoDescriptor> desc;
+    const sp<AudioFlingerClient> afc = getAudioFlingerClient();
+    if (afc != 0) {
+        desc = afc->getIoDescriptor(ioHandle);
+    }
+    return desc;
+}
+
+const sp<AudioSystem::AudioFlingerClient> AudioSystem::getAudioFlingerClient()
+{
+    // calling get_audio_flinger() will initialize gAudioFlingerClient if needed
+    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
+    if (af == 0) return 0;
+    Mutex::Autolock _l(gLock);
+    return gAudioFlingerClient;
+}
+```
+
+## AudioSystem::get_audio_policy_service()
+
+```cpp
 // client singleton for AudioPolicyService binder interface
 // protected by gLockAPS
 sp<IAudioPolicyService> AudioSystem::gAudioPolicyService;
@@ -385,48 +428,7 @@ const sp<IAudioPolicyService> AudioSystem::get_audio_policy_service()
 
     return ap;
 }
-
-status_t AudioSystem::getSamplingRate(audio_io_handle_t ioHandle,
-                                      uint32_t* samplingRate)
-{
-    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
-    if (af == 0) return PERMISSION_DENIED;
-    sp<AudioIoDescriptor> desc = getIoDescriptor(ioHandle);
-    if (desc == 0) {
-        *samplingRate = af->sampleRate(ioHandle);
-    } else {
-        *samplingRate = desc->mSamplingRate;
-    }
-    if (*samplingRate == 0) {
-        ALOGE("AudioSystem::getSamplingRate failed for ioHandle %d", ioHandle);
-        return BAD_VALUE;
-    }
-
-    ALOGV("getSamplingRate() ioHandle %d, sampling rate %u", ioHandle, *samplingRate);
-
-    return NO_ERROR;
-}
-
-sp<AudioIoDescriptor> AudioSystem::getIoDescriptor(audio_io_handle_t ioHandle)
-{
-    sp<AudioIoDescriptor> desc;
-    const sp<AudioFlingerClient> afc = getAudioFlingerClient();
-    if (afc != 0) {
-        desc = afc->getIoDescriptor(ioHandle);
-    }
-    return desc;
-}
-
-const sp<AudioSystem::AudioFlingerClient> AudioSystem::getAudioFlingerClient()
-{
-    // calling get_audio_flinger() will initialize gAudioFlingerClient if needed
-    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
-    if (af == 0) return 0;
-    Mutex::Autolock _l(gLock);
-    return gAudioFlingerClient;
-}
 ```
-
 ## AudioSystem::get_audio_flinger()
 
 ```cpp
@@ -513,5 +515,5 @@ status_t AudioSystem::getFrameCount(audio_io_handle_t ioHandle,
 }
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE1ODIzMDk3NjIsLTM2NTk4MDQyXX0=
+eyJoaXN0b3J5IjpbMTc3MDMxNzc2MSwtMzY1OTgwNDJdfQ==
 -->
