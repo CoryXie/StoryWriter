@@ -562,5 +562,5 @@ status_t AudioSystem::getOutputLatency(uint32_t* latency, audio_stream_type_t st
 }
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTYwNjE4MjM3MCwtMzY1OTgwNDJdfQ==
+eyJoaXN0b3J5IjpbMTYwNjE4MjM3MF19
 -->
