@@ -316,7 +316,9 @@ static inline size_t audio_bytes_per_sample(audio_format_t format)
     return size;
 }
 ```
+## AudioSystem::getOutputSamplingRate()
+
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTM2NTk4MDQyXX0=
+eyJoaXN0b3J5IjpbMTEyMzAxODAzMiwtMzY1OTgwNDJdfQ==
 -->
