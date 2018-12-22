@@ -425,7 +425,69 @@ const sp<AudioSystem::AudioFlingerClient> AudioSystem::getAudioFlingerClient()
     Mutex::Autolock _l(gLock);
     return gAudioFlingerClient;
 }
+
+// establish binder interface to AudioFlinger service
+const sp<IAudioFlinger> AudioSystem::get_audio_flinger()
+{
+    sp<IAudioFlinger> af;
+    sp<AudioFlingerClient> afc;
+    {
+        Mutex::Autolock _l(gLock);
+        if (gAudioFlinger == 0) {
+            sp<IServiceManager> sm = defaultServiceManager();
+            sp<IBinder> binder;
+            do {
+                binder = sm->getService(String16("media.audio_flinger"));
+                if (binder != 0)
+                    break;
+                ALOGW("AudioFlinger not published, waiting...");
+                usleep(500000); // 0.5 s
+            } while (true);
+            if (gAudioFlingerClient == NULL) {
+                gAudioFlingerClient = new AudioFlingerClient();
+            } else {
+                if (gAudioErrorCallback) {
+                    gAudioErrorCallback(NO_ERROR);
+                }
+            }
+            binder->linkToDeath(gAudioFlingerClient);
+            gAudioFlinger = interface_cast<IAudioFlinger>(binder);
+            LOG_ALWAYS_FATAL_IF(gAudioFlinger == 0);
+            afc = gAudioFlingerClient;
+            // Make sure callbacks can be received by gAudioFlingerClient
+            ProcessState::self()->startThreadPool();
+        }
+        af = gAudioFlinger;
+    }
+    if (afc != 0) {
+        int64_t token = IPCThreadState::self()->clearCallingIdentity();
+        af->registerClient(afc);
+        IPCThreadState::self()->restoreCallingIdentity(token);
+    }
+    return af;
+}
+```
+
+## AudioSystem::getOutputFrameCount
+
+```cpp
+status_t AudioSystem::getOutputFrameCount(size_t* frameCount, audio_stream_type_t streamType)
+{
+    audio_io_handle_t output;
+
+    if (streamType == AUDIO_STREAM_DEFAULT) {
+        streamType = AUDIO_STREAM_MUSIC;
+    }
+
+    output = getOutput(streamType);
+    if (output == AUDIO_IO_HANDLE_NONE) {
+        return PERMISSION_DENIED;
+    }
+
+    return getFrameCount(output, frameCount);
+}
+
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE0MzEzNTkzMzQsLTM2NTk4MDQyXX0=
+eyJoaXN0b3J5IjpbMTM3MDQ3NTQ0MSwtMzY1OTgwNDJdfQ==
 -->
