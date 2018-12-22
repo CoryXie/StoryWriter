@@ -533,6 +533,34 @@ status_t AudioSystem::getOutputLatency(uint32_t* latency, audio_stream_type_t st
     return getLatency(output, latency);
 }
 ```
+
+## AudioSystem::calculateMinFrameCount()
+
+```cpp
+/* static */ size_t AudioSystem::calculateMinFrameCount(
+        uint32_t afLatencyMs, uint32_t afFrameCount, uint32_t afSampleRate,
+        uint32_t sampleRate, float speed /*, uint32_t notificationsPerBufferReq*/)
+{
+    // Ensure that buffer depth covers at least audio hardware latency
+    uint32_t minBufCount = afLatencyMs / ((1000 * afFrameCount) / afSampleRate);
+    if (minBufCount < 2) {
+        minBufCount = 2;
+    }
+#if 0
+    // The notificationsPerBufferReq parameter is not yet used for non-fast tracks,
+    // but keeping the code here to make it easier to add later.
+    if (minBufCount < notificationsPerBufferReq) {
+        minBufCount = notificationsPerBufferReq;
+    }
+#endif
+    ALOGV("calculateMinFrameCount afLatency %u  afFrameCount %u  afSampleRate %u  "
+            "sampleRate %u  speed %f  minBufCount: %u" /*"  notificationsPerBufferReq %u"*/,
+            afLatencyMs, afFrameCount, afSampleRate, sampleRate, speed, minBufCount
+            /*, notificationsPerBufferReq*/);
+    return minBufCount * sourceFramesNeededWithTimestretch(
+            sampleRate, afFrameCount, afSampleRate, speed);
+}
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTA2NDI4NjQ4NSwtMzY1OTgwNDJdfQ==
+eyJoaXN0b3J5IjpbMTYwNjE4MjM3MCwtMzY1OTgwNDJdfQ==
 -->
