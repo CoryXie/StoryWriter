@@ -318,7 +318,32 @@ static inline size_t audio_bytes_per_sample(audio_format_t format)
 ```
 ## AudioSystem::getOutputSamplingRate()
 
+```cpp
+status_t AudioSystem::getOutputSamplingRate(uint32_t* samplingRate, audio_stream_type_t streamType)
+{
+    audio_io_handle_t output;
 
+    if (streamType == AUDIO_STREAM_DEFAULT) {
+        streamType = AUDIO_STREAM_MUSIC;
+    }
+
+    output = getOutput(streamType);
+    if (output == 0) {
+        return PERMISSION_DENIED;
+    }
+
+    return getSamplingRate(output, samplingRate);
+}
+
+audio_io_handle_t AudioSystem::getOutput(audio_stream_type_t stream)
+{
+    const sp<IAudioPolicyService>& aps = AudioSystem::get_audio_policy_service();
+    if (aps == 0) return 0;
+    return aps->getOutput(stream);
+}
+
+
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTEyMzAxODAzMiwtMzY1OTgwNDJdfQ==
+eyJoaXN0b3J5IjpbLTE1NTc2NDM4NTYsLTM2NTk4MDQyXX0=
 -->
