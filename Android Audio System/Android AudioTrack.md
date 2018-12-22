@@ -425,7 +425,11 @@ const sp<AudioSystem::AudioFlingerClient> AudioSystem::getAudioFlingerClient()
     Mutex::Autolock _l(gLock);
     return gAudioFlingerClient;
 }
+```
 
+## AudioSystem::get_audio_flinger()
+
+```cpp
 // establish binder interface to AudioFlinger service
 const sp<IAudioFlinger> AudioSystem::get_audio_flinger()
 {
@@ -468,7 +472,7 @@ const sp<IAudioFlinger> AudioSystem::get_audio_flinger()
 }
 ```
 
-## AudioSystem::getOutputFrameCount
+## AudioSystem::getOutputFrameCount()
 
 ```cpp
 status_t AudioSystem::getOutputFrameCount(size_t* frameCount, audio_stream_type_t streamType)
@@ -487,7 +491,27 @@ status_t AudioSystem::getOutputFrameCount(size_t* frameCount, audio_stream_type_
     return getFrameCount(output, frameCount);
 }
 
+status_t AudioSystem::getFrameCount(audio_io_handle_t ioHandle,
+                                    size_t* frameCount)
+{
+    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
+    if (af == 0) return PERMISSION_DENIED;
+    sp<AudioIoDescriptor> desc = getIoDescriptor(ioHandle);
+    if (desc == 0) {
+        *frameCount = af->frameCount(ioHandle);
+    } else {
+        *frameCount = desc->mFrameCount;
+    }
+    if (*frameCount == 0) {
+        ALOGE("AudioSystem::getFrameCount failed for ioHandle %d", ioHandle);
+        return BAD_VALUE;
+    }
+
+    ALOGV("getFrameCount() ioHandle %d, frameCount %zu", ioHandle, *frameCount);
+
+    return NO_ERROR;
+}
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTM3MDQ3NTQ0MSwtMzY1OTgwNDJdfQ==
+eyJoaXN0b3J5IjpbLTE1ODIzMDk3NjIsLTM2NTk4MDQyXX0=
 -->
