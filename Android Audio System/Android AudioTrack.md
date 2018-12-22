@@ -406,7 +406,26 @@ status_t AudioSystem::getSamplingRate(audio_io_handle_t ioHandle,
 
     return NO_ERROR;
 }
+
+sp<AudioIoDescriptor> AudioSystem::getIoDescriptor(audio_io_handle_t ioHandle)
+{
+    sp<AudioIoDescriptor> desc;
+    const sp<AudioFlingerClient> afc = getAudioFlingerClient();
+    if (afc != 0) {
+        desc = afc->getIoDescriptor(ioHandle);
+    }
+    return desc;
+}
+
+const sp<AudioSystem::AudioFlingerClient> AudioSystem::getAudioFlingerClient()
+{
+    // calling get_audio_flinger() will initialize gAudioFlingerClient if needed
+    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
+    if (af == 0) return 0;
+    Mutex::Autolock _l(gLock);
+    return gAudioFlingerClient;
+}
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTA0NDAyNDA4OSwtMzY1OTgwNDJdfQ==
+eyJoaXN0b3J5IjpbLTE0MzEzNTkzMzQsLTM2NTk4MDQyXX0=
 -->
