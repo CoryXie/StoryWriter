@@ -514,6 +514,25 @@ status_t AudioSystem::getFrameCount(audio_io_handle_t ioHandle,
     return NO_ERROR;
 }
 ```
+## AudioSystem::getOutputLatency()
+
+```cpp
+status_t AudioSystem::getOutputLatency(uint32_t* latency, audio_stream_type_t streamType)
+{
+    audio_io_handle_t output;
+
+    if (streamType == AUDIO_STREAM_DEFAULT) {
+        streamType = AUDIO_STREAM_MUSIC;
+    }
+
+    output = getOutput(streamType);
+    if (output == AUDIO_IO_HANDLE_NONE) {
+        return PERMISSION_DENIED;
+    }
+
+    return getLatency(output, latency);
+}
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTc3MDMxNzc2MSwtMzY1OTgwNDJdfQ==
+eyJoaXN0b3J5IjpbMTA2NDI4NjQ4NSwtMzY1OTgwNDJdfQ==
 -->
